@@ -31,9 +31,8 @@ public class SwiftAmazonS3CognitoPlugin: NSObject, FlutterPlugin {
               let uploadRequest = AWSS3TransferManagerUploadRequest()
               uploadRequest?.bucket = bucket
               uploadRequest?.key = nameGenerator()
-              uploadRequest?.contentType = "image/jpeg"
               uploadRequest?.body = fileUrl as URL
-              uploadRequest?.acl = .publicReadWrite
+              uploadRequest?.acl = .private
 
               let credentialsProvider = AWSCognitoCredentialsProvider(
                   regionType: AWSRegionType.USEast1,
@@ -95,10 +94,9 @@ public class SwiftAmazonS3CognitoPlugin: NSObject, FlutterPlugin {
           let uploadRequest = AWSS3TransferManagerUploadRequest()
           uploadRequest?.bucket = bucket
           uploadRequest?.key = fileName
-          uploadRequest?.contentType = "image/jpeg"
           uploadRequest?.body = fileUrl as URL
           uploadRequest
-          uploadRequest?.acl = .publicReadWrite
+          uploadRequest?.acl = .private
 
 
           let credentialsProvider = AWSCognitoCredentialsProvider(
