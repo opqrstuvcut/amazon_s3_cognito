@@ -3,10 +3,10 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'amazon_s3_cognito'
-  s.version          = '0.1.8'
-  s.summary          = 'This plugin allows users to upload and delete image for amazon s3 cognito'
+  s.version          = '0.3.0'
+  s.summary          = 'This plugin allows users to list, upload and delete image and files for amazon s3 cognito'
   s.description      = <<-DESC
-This plugin allows users to upload and delete image for amazon s3 cognito
+This plugin allows users to list, upload and delete image for amazon s3 cognito
                        DESC
   s.homepage         = 'http://example.com'
   s.license          = { :file => '../LICENSE' }
@@ -17,7 +17,8 @@ This plugin allows users to upload and delete image for amazon s3 cognito
   s.dependency 'Flutter'
   s.dependency 'AWSS3'
   s.dependency 'AWSCore'
+  s.dependency 'AWSCognito'
 
-  s.ios.deployment_target = '8.0'
+  s.ios.deployment_target = '12.0'
 end
 

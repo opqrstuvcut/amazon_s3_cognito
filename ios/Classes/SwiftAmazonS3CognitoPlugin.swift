@@ -19,46 +19,12 @@ public class SwiftAmazonS3CognitoPlugin: NSObject, FlutterPlugin {
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-          if(call.method.elementsEqual("uploadImageToAmazon")){
-              let arguments = call.arguments as? NSDictionary
-              let imagePath = arguments!["filePath"] as? String
-              let bucket = arguments!["bucket"] as? String
-              let identity = arguments!["identity"] as? String
-
-              var imageAmazonUrl = ""
-              let fileUrl = NSURL(fileURLWithPath: imagePath!)
-
-              let uploadRequest = AWSS3TransferManagerUploadRequest()
-              uploadRequest?.bucket = bucket
-              uploadRequest?.key = nameGenerator()
-              uploadRequest?.body = fileUrl as URL
-              uploadRequest?.acl = .private
-
-              let credentialsProvider = AWSCognitoCredentialsProvider(
-                  regionType: AWSRegionType.USEast1,
-                  identityPoolId: identity!)
-              let configuration = AWSServiceConfiguration(
-                  region: AWSRegionType.USEast1,
-                  credentialsProvider: credentialsProvider)
-              AWSServiceManager.default().defaultServiceConfiguration = configuration
-
-              AWSS3TransferManager.default().upload(uploadRequest!).continueWith { (task) -> AnyObject? in
-                  if let error = task.error {
-                      print("❌ Upload failed (\(error))")
-                  }
-                  if task.result != nil {
-                      imageAmazonUrl = "https://s3.amazonaws.com/\(bucket!)/\(uploadRequest!.key!)"
-                      print("✅ Upload successed (\(imageAmazonUrl))")
-                  } else {
-                      print("❌ Unexpected empty result.")
-                  }
-                  result(imageAmazonUrl)
-                  return nil
-              }
-          }else if(call.method.elementsEqual("uploadImage")){
+         if(call.method.elementsEqual("uploadImage")){
               uploadImageForRegion(call,result: result)
           }else if(call.method.elementsEqual("deleteImage")){
               deleteImage(call,result: result)
+          }else if(call.method.elementsEqual("listFiles")){
+              listFiles(call,result: result)
           }
       }
 
@@ -72,60 +38,99 @@ public class SwiftAmazonS3CognitoPlugin: NSObject, FlutterPlugin {
 
 
       func uploadImageForRegion(_ call: FlutterMethodCall, result: @escaping FlutterResult){
-          let arguments = call.arguments as? NSDictionary
-          let imagePath = arguments!["filePath"] as? String
-          let bucket = arguments!["bucket"] as? String
-          let identity = arguments!["identity"] as? String
-          let fileName = arguments!["imageName"] as? String
-          let region = arguments!["region"] as? String
-          let subRegion = arguments!["subRegion"] as? String
+                let arguments = call.arguments as? NSDictionary
+                let imagePath = arguments!["filePath"] as? String
+                let bucket = arguments!["bucket"] as? String
+                let identity = arguments!["identity"] as? String
+                let fileName = arguments!["imageName"] as? String
+                let region = arguments!["region"] as? String
+                let subRegion = arguments!["subRegion"] as? String
 
-          print("region" + region!)
-
-          print("subregion " + subRegion!)
-          if(region != nil && subRegion != nil){
-              initRegions(region: region!, subRegion: subRegion!)
-          }
+              let contentTypeParam = arguments!["contentType"] as? String
 
 
-          var imageAmazonUrl = ""
-          let fileUrl = NSURL(fileURLWithPath: imagePath!)
+                print("region" + region!)
 
-          let uploadRequest = AWSS3TransferManagerUploadRequest()
-          uploadRequest?.bucket = bucket
-          uploadRequest?.key = fileName
-          uploadRequest?.body = fileUrl as URL
-          uploadRequest
-          uploadRequest?.acl = .private
+                print("subregion " + subRegion!)
+                if(region != nil && subRegion != nil){
+                    initRegions(region: region!, subRegion: subRegion!)
+                }
 
-
-          let credentialsProvider = AWSCognitoCredentialsProvider(
-              regionType: region1,
-              identityPoolId: identity!)
-          let configuration = AWSServiceConfiguration(
-              region: subRegion1,
-              credentialsProvider: credentialsProvider)
-          AWSServiceManager.default().defaultServiceConfiguration = configuration
+              let credentialsProvider = AWSCognitoCredentialsProvider(
+                  regionType: region1,
+                  identityPoolId: identity!)
+              let configuration = AWSServiceConfiguration(
+                  region: subRegion1,
+                  credentialsProvider: credentialsProvider)
+              AWSServiceManager.default().defaultServiceConfiguration = configuration
 
 
-          AWSS3TransferManager.default().upload(uploadRequest!).continueWith { (task) -> AnyObject? in
-              if let error = task.error {
-                  print("❌ Upload failed (\(error))")
+                var imageAmazonUrl = ""
+                let fileUrl = NSURL(fileURLWithPath: imagePath!)
+
+                let uploadRequest = AWSS3TransferManagerUploadRequest()
+                uploadRequest?.bucket = bucket
+                uploadRequest?.key = fileName
+
+
+              var contentType = "image/jpeg"
+              if(contentTypeParam != nil &&
+                  contentTypeParam!.count > 0){
+                  contentType = contentTypeParam!
               }
 
+              if(contentTypeParam == nil || contentTypeParam!.count == 0 &&  fileName!.contains(".")){
+                             var index = fileName!.lastIndex(of: ".")
+                             index = fileName!.index(index!, offsetBy: 1)
+                             if(index != nil){
+                                 let extention = String(fileName![index!...])
+                                 print("extension"+extention);
+                                 if(extention.lowercased().contains("png") ||
+                                 extention.lowercased().contains("jpg") ||
+                                     extention.lowercased().contains("jpeg") ){
+                                     contentType = "image/"+extention
+                                 }else{
 
-              if task.result != nil {
+                                  if(extention.lowercased().contains("pdf")){
+                                      contentType = "application/pdf"
+                                      }else{
+                                      contentType = "application/*"
+                                      }
+
+                                 }
+
+                             }
+                         }
+
+              uploadRequest?.contentType = contentType
+
+                uploadRequest?.body = fileUrl as URL
+
+                uploadRequest?.acl = .private
 
 
-                  imageAmazonUrl = "https://s3-" + self.subRegion1.stringValue +  ".amazonaws.com/\(bucket!)/\(uploadRequest!.key!)"
-                  print("✅ Upload successed (\(imageAmazonUrl))")
-              } else {
-                  print("❌ Unexpected empty result.")
-              }
-              result(imageAmazonUrl)
-              return nil
-          }
-      }
+
+
+                AWSS3TransferManager.default().upload(uploadRequest!).continueWith { (task) -> AnyObject? in
+                    if let error = task.error {
+                        print("❌ Upload failed (\(error))")
+                    }
+
+
+                    if task.result != nil {
+
+//                        imageAmazonUrl = "https://s3-" + self.subRegion1.stringValue +  ".amazonaws.com/\(bucket!)/\(uploadRequest!.key!)"
+//
+                        imageAmazonUrl = AWSS3.default().configuration.endpoint.url.description + "/\(bucket!)/\(uploadRequest!.key!)"
+
+                        print("✅ Upload successed (\(imageAmazonUrl))")
+                    } else {
+                        print("❌ Unexpected empty result.")
+                    }
+                    result(imageAmazonUrl)
+                    return nil
+                }
+            }
 
       func deleteImage(_ call: FlutterMethodCall, result: @escaping FlutterResult){
           let arguments = call.arguments as? NSDictionary
@@ -164,6 +169,48 @@ public class SwiftAmazonS3CognitoPlugin: NSObject, FlutterPlugin {
               return nil
           }
 
+
+      }
+
+      func listFiles(_ call: FlutterMethodCall, result: @escaping FlutterResult){
+          let arguments = call.arguments as? NSDictionary
+          let bucket = arguments!["bucket"] as? String
+          let identity = arguments!["identity"] as? String
+          let filePrefix = arguments!["prefix"] as? String
+          let region = arguments!["region"] as? String
+          let subRegion = arguments!["subRegion"] as? String
+
+
+          if(region != nil && subRegion != nil){
+              initRegions(region: region!, subRegion: subRegion!)
+          }
+
+          let credentialsProvider = AWSCognitoCredentialsProvider(
+              regionType: AWSRegionType.regionTypeForString(regionString: region!),
+              identityPoolId: identity!)
+          let configuration = AWSServiceConfiguration(
+              region: AWSRegionType.regionTypeForString(regionString: subRegion!),
+              credentialsProvider: credentialsProvider)
+          AWSServiceManager.default().defaultServiceConfiguration = configuration
+
+          AWSS3.register(with: configuration!, forKey: "defaultKey")
+
+          let s3 = AWSS3.s3(forKey: "defaultKey")
+          let listRequest = AWSS3ListObjectsRequest()
+          listRequest?.bucket = bucket // bucket name
+          listRequest?.prefix = filePrefix // File prefix
+
+          s3.listObjects(listRequest!).continueWith { (task:AWSTask) -> AnyObject? in
+              if let error = task.error {
+                  print("Error occurred: \(error)")
+                  result("Error occurred: \(error)")
+                  return nil
+              }
+
+              let keys = task.result?.contents!.map({ $0.key })
+              result(keys)
+              return nil
+          }
 
       }
 
